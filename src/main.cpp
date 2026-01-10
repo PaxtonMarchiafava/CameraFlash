@@ -10,20 +10,13 @@
 #include <avr/wdt.h>
 #include <avr/io.h>
 
-#define APW7261 106 // I2C address
-// 00 Control/Status
-// 01 Control/Input Current Limit
-// 02 Control/Battery Voltage
-// 03 Vender/Part/Revision
-// 04 Termination/Fast Charge Current
-// 05 Enable/Special Charger Voltage
-// 06 Safety Limit
+// constants
+#define brightnessLevels 10
 
-#define LM2759 83 // I2C address
-// general perpose register 0x10
-// Torch Current 0xa0 (current -> value = (15/165)x-2)
-// Flash Current 0xb0 (current -> value = (1/62)x-(9/6))
-// Flash Timeout duration 0xC0
+
+// I2C address
+#define APW7261 106
+#define LM2759 83
 
 
 // #define CameraFlash 0
@@ -42,6 +35,7 @@ void sleepDevice() {
   sleep_cpu();
   sleep_disable();
 }
+
 
 
 void BrightnessDownButton () {
@@ -86,12 +80,12 @@ void setup() {
   // TCB0.CTRLA &= ~TCB_ENABLE_bm; // disable 16-bit Timer/Counter Type B
   AC0.CTRLA &= ~AC_ENABLE_bm; // disable Analog Comparator
   
-  // TWI0.MCTRLA &= ~TWI_ENABLE_bm; // disable twip
+  // TWI0.MCTRLA &= ~TWI_ENABLE_bm; // disable twi
   
 
   writeRegister(LM2759, 0xA0, torchBrightness); // set torch current
 
-  writeRegister(LM2759, 0xB0, 0x06); // set Flash current
+  writeRegister(LM2759, 0xB0, 0x09); // set Flash current
   writeRegister(LM2759, 0xC0, 0x02); // set Flash duration
   
   sei();
@@ -100,12 +94,10 @@ void setup() {
 
 void loop() {
 
-  if ((flags & 1)) { // brightness up
-    
+  if (flags & 1) { // brightness up
     flags = 0;
     
-    
-    if ((torchBrightness < 16)) { // regular brightness up
+    if (torchBrightness < brightnessLevels) { // regular brightness up
       torchBrightness++;
       if (torchBrightness == 1) {
         writeRegister(LM2759, 0x10, 0x09); // torch mode
@@ -117,20 +109,25 @@ void loop() {
     } else { // if brightness max, flash
       writeRegister(LM2759, 0x10, 0x08 + 0x03); // Set to flash mode
       delay(100);
+      writeRegister(LM2759, 0x10, 0x08);
       writeRegister(LM2759, 0x10, 0x08 + 0x01); // set to torch mode
+      writeRegister(LM2759, 0xA0, torchBrightness - 1);
     }
   }
   
-  if ((flags & 2) && (torchBrightness > 0)) { // brightness down
+  if ((flags & 2)) { // brightness down
     flags = 0;
-    torchBrightness--;
-    if (torchBrightness <= 0) {
-      writeRegister(LM2759, 0x10, 0x08); // set to shutoff
-    } else {
-      writeRegister(LM2759, 0xA0, torchBrightness - 1);
-    }
-    while (!digitalRead(Button2)) {
-      delay(1);
+
+    if (torchBrightness > 0) {
+      torchBrightness--;
+      if (torchBrightness <= 0) {
+        writeRegister(LM2759, 0x10, 0x08); // set to shutoff
+      } else {
+        writeRegister(LM2759, 0xA0, torchBrightness - 1);
+      }
+      while (!digitalRead(Button2)) {
+        delay(1);
+      }
     }
   }
 
