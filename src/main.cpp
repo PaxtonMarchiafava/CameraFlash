@@ -1,4 +1,4 @@
-// todo: Only one pin interrupt works while in sleep
+
 // using the compiler flag -Os
 
 
@@ -12,13 +12,12 @@
 #include <avr/io.h>
 
 // constants
-#define brightnessLevels 10
+#define maxBrightnessLevel 12 // max 16
 
 #define brightnessUpFlag 1
 #define brightnessDownFlag 2
 
 // I2C address
-#define APW7261 106
 #define LM2759 83
 
 // #define CameraFlash 0
@@ -26,8 +25,8 @@
 #define button1 0 // pa6
 #define button2 4 // pa3
 
-uint8_t torchBrightness = 0;
-uint8_t FlashBrightness = 0;
+uint8_t torchBrightness = 0; // datasheet max 15, because wee add 0 as an option this var can be 16 as max
+uint8_t FlashBrightness = 4; // datasheet max 15
 volatile uint8_t flags = 0;
 
 /*
@@ -36,7 +35,7 @@ volatile uint8_t flags = 0;
 │  │└──────┘└──────┘└──────┘└──────┘└──────┘│  │
 │  │          Everything Functions          │  │
 │  │┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐│  │
-│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │  
+│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │
 └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘
 */
 
@@ -54,7 +53,7 @@ void writeRegister(uint8_t device, uint8_t reg, uint8_t value) {
 │  │└──────┘└──────┘└──────┘└──────┘└──────┘│  │
 │  │             Setup Functions            │  │
 │  │┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐│  │
-│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │  
+│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │
 └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘
 */
 
@@ -80,6 +79,11 @@ void disablePeripherals() {
   TCB0.CTRLA &= ~TCB_ENABLE_bm; // disable 16-bit Timer/Counter Type B
   AC0.CTRLA &= ~AC_ENABLE_bm; // disable Analog Comparator
   // TWI0.MCTRLA &= ~TWI_ENABLE_bm; // disable twi
+  
+  CCP = CCP_IOREG_gc;
+  // CLKCTRL.MCLKCTRLA = CLKCTRL_CLKSEL_OSCULP32K_gc;
+  
+  // BOD.CTRLA &= BOD_SAMPFREQ_1KHZ_gc;
 }
 
 void gpioSetup () {
@@ -119,7 +123,7 @@ void i2cSetup () {
   
   writeRegister(LM2759, 0x10, 0x08); // shutdown led driver
   writeRegister(LM2759, 0xA0, 0); // set torch current
-  writeRegister(LM2759, 0xB0, 0x06); // set Flash current
+  writeRegister(LM2759, 0xB0, FlashBrightness); // set Flash current
   writeRegister(LM2759, 0xC0, 0x02); // set Flash duration
 
 }
@@ -128,6 +132,12 @@ void setup() {
   gpioSetup();
   i2cSetup();
   disablePeripherals();
+
+  // change clock speeds need to test
+  // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, 0);   // 20 MHz
+  // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, CLKCTRL_PDIV_4X_gc | CLKCTRL_PEN_bm);  // 5 MHz
+
+
 }
 
 /*
@@ -136,7 +146,7 @@ void setup() {
 │  │└──────┘└──────┘└──────┘└──────┘└──────┘│  │
 │  │             Loop Functions             │  │
 │  │┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐│  │
-│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │  
+│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │
 └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘
 */
 
@@ -153,15 +163,31 @@ void sleepDevice() {
   // sleep_disable();
 }
 
+void writeBrightness() {
+  writeRegister(LM2759, 0xA0, (torchBrightness - 1) * 2);
+}
+
 // Increases the torch mode brightness
 void brightnessUp () {
-  if (torchBrightness < brightnessLevels) {
+  if (torchBrightness < maxBrightnessLevel) {
     torchBrightness++;
     if (torchBrightness == 1) {
       writeRegister(LM2759, 0x10, 0x09); // torch mode
     }
+    writeBrightness();
+
+  } /* else if ((torchBrightness >= maxBrightnessLevel)) { // flash
+
+    writeRegister(LM2759, 0xB0, FlashBrightness); // set Flash current
+    writeRegister(LM2759, 0x10, 0x08 + 0x03); // Set to flash mode
+    delay(10);
     writeRegister(LM2759, 0xA0, torchBrightness - 1);
-  }
+    writeRegister(LM2759, 0x10, 0x08 + 0x01); // set to torch mode
+  
+  }*/
+
+
+
   while (!digitalRead(button1)) {}
 }
 
@@ -172,7 +198,7 @@ void brightnessDown () {
     if (torchBrightness <= 0) {
       writeRegister(LM2759, 0x10, 0x08); // set to shutoff
     } else {
-      writeRegister(LM2759, 0xA0, torchBrightness - 1);
+      writeBrightness();
     }
   }
   while (!digitalRead(button2)) {}
@@ -191,52 +217,5 @@ void loop() {
   sleepDevice();
   
 }
-
-
-/*
-void loop() {
-  
-if (!digitalRead(button1)) { // brightness up
-// flags = 0;
-brightnessUp();
-//   writeRegister(LM2759, 0x10, 0x09); // torch mode
-//   writeRegister(LM2759, 0xA0, 0);
-
-// } else {
-  //   writeRegister(LM2759, 0x10, 0x08); // off
-  while (!digitalRead(button1)) {}
-}
-
-if (!digitalRead(button2)) { // brightness down
-// flags = 0;
-brightnessDown();
-while (!digitalRead(button2)) {}
-}
-
-sleepDevice();
-}
-*/
-
-/*
-┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐
-│  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  │
-│  │└──────┘└──────┘└──────┘└──────┘└──────┘│  │
-│  │               Old Stuff                │  │
-│  │┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐│  │
-│  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  ┌┐  └┘  │  
-└──────┘└──────┘└──────┘└──────┘└──────┘└──────┘
-
-    // if at max brightness, flash
-    } else { // if brightness max, flash
-      writeRegister(LM2759, 0x10, 0x08 + 0x03); // Set to flash mode
-      delay(100);
-      writeRegister(LM2759, 0x10, 0x08);
-      writeRegister(LM2759, 0x10, 0x08 + 0x01); // set to torch mode
-      writeRegister(LM2759, 0xA0, torchBrightness - 1);
-    }
-
-*/
-
-
 
 
