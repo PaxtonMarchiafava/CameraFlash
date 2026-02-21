@@ -1,6 +1,6 @@
 # CameraFlash
 
-![Corner View of the Prototype](MEDIA\PrototypeCorner.jpeg)
+![Corner View of the Prototype](MEDIA/PrototypeCorner.jpeg)
 
 I bought a Sony a7III a while ago thinking I would be fine with no flash. I stand by this, but I do want a flashlight for video. ~~Might as well put in a flash function while I'm at it.~~ Do this yourself if you want. I left a pin open for it on the pcb.
 
@@ -15,7 +15,7 @@ Theres only 2 kB of program memory so it cant really be all that complicated. uC
 ## ToDo
 ### Mechanical lens size problem
 First prototype has a problem where the back of the lens obscures the light from the flash from being in the photo. Here is a photo of a wall:
-![MechanicalDesignFlaw](MEDIA\DesignFlaw.jpg)
+![MechanicalDesignFlaw](MEDIA/DesignFlaw.jpg)
 The circle is the backside of the lens casting a shadow
 
 ### Cannot boot from dead
