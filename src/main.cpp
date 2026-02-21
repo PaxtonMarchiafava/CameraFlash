@@ -21,8 +21,12 @@
 #define LM2759 83
 
 // #define CameraFlash 0
-#define FLASH 1
+
+/* OLD HARDWARE
 #define button1 0 // pa6
+#define button2 4 // pa3
+*/
+#define button1 1 // pa7
 #define button2 4 // pa3
 
 uint8_t torchBrightness = 0; // datasheet max 15, because wee add 0 as an option this var can be 16 as max
@@ -80,7 +84,7 @@ void disablePeripherals() {
   AC0.CTRLA &= ~AC_ENABLE_bm; // disable Analog Comparator
   // TWI0.MCTRLA &= ~TWI_ENABLE_bm; // disable twi
   
-  CCP = CCP_IOREG_gc;
+  // CCP = CCP_IOREG_gc;
   // CLKCTRL.MCLKCTRLA = CLKCTRL_CLKSEL_OSCULP32K_gc;
   
   // BOD.CTRLA &= BOD_SAMPFREQ_1KHZ_gc;
@@ -88,22 +92,11 @@ void disablePeripherals() {
 
 void gpioSetup () {
 
-/* only works in SLEEP_MODE_IDLE
-pinMode(button1, INPUT_PULLUP);
-pinMode(button2, INPUT_PULLUP);
-attachInterrupt(digitalPinToInterrupt(button1), buttonPressISR, FALLING);
-attachInterrupt(digitalPinToInterrupt(button2), buttonPressISR, FALLING);
-*/
-
-  pinMode(FLASH, OUTPUT);
-  digitalWrite(FLASH, LOW);
   pinMode(button1, INPUT_PULLUP);
   pinMode(button2, INPUT_PULLUP);
 
   PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
-  PORTA.PIN6CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
-  // PORTA.INTFLAGS Gets set on interrupt
-  // NEED to clear PORTA.INTFLAGS in isr
+  PORTA.PIN7CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sei();
@@ -164,7 +157,7 @@ void sleepDevice() {
 }
 
 void writeBrightness() {
-  writeRegister(LM2759, 0xA0, (torchBrightness - 1) * 2);
+  writeRegister(LM2759, 0xA0, (torchBrightness - 1));
 }
 
 // Increases the torch mode brightness
@@ -176,7 +169,9 @@ void brightnessUp () {
     }
     writeBrightness();
 
-  } /* else if ((torchBrightness >= maxBrightnessLevel)) { // flash
+  } 
+
+  /* else if ((torchBrightness >= maxBrightnessLevel)) { // flash
 
     writeRegister(LM2759, 0xB0, FlashBrightness); // set Flash current
     writeRegister(LM2759, 0x10, 0x08 + 0x03); // Set to flash mode
@@ -185,8 +180,6 @@ void brightnessUp () {
     writeRegister(LM2759, 0x10, 0x08 + 0x01); // set to torch mode
   
   }*/
-
-
 
   while (!digitalRead(button1)) {}
 }
