@@ -1,6 +1,8 @@
 
 ## Electronics
 
+Need to test if I can use 5.1k resistors as twi pullups
+
 #### Quiescent Current
 | Item | Current draw in shutdown | Condition |
 |:--:|:--:|:--:|

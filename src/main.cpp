@@ -162,17 +162,21 @@ void writeBrightness() {
 
 // Increases the torch mode brightness
 void brightnessUp () {
-  if (torchBrightness < maxBrightnessLevel) {
+  if (torchBrightness < maxBrightnessLevel) { // brightness below max
     torchBrightness++;
     if (torchBrightness == 1) {
       writeRegister(LM2759, 0x10, 0x09); // torch mode
     }
     writeBrightness();
 
-  } 
+  } else if (torchBrightness >= maxBrightnessLevel) { // wrap back around from max brightness to off
+    torchBrightness = 0;
+    writeRegister(LM2759, 0x10, 0x08); // set to shutoff
+
+  }
+
 
   /* else if ((torchBrightness >= maxBrightnessLevel)) { // flash
-
     writeRegister(LM2759, 0xB0, FlashBrightness); // set Flash current
     writeRegister(LM2759, 0x10, 0x08 + 0x03); // Set to flash mode
     delay(10);
@@ -193,7 +197,13 @@ void brightnessDown () {
     } else {
       writeBrightness();
     }
+
+  } else if (torchBrightness <= 0) { // torch already at 0, wrap around to max brightness
+    torchBrightness = maxBrightnessLevel;
+    writeRegister(LM2759, 0x10, 0x09); // torch mode
   }
+
+
   while (!digitalRead(button2)) {}
 }
 
@@ -202,6 +212,7 @@ void loop() {
   if (flags == brightnessUpFlag) {
     flags = 0;
     brightnessUp();
+
   } else if (flags == brightnessDownFlag) {
     flags = 0;
     brightnessDown();
