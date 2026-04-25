@@ -1,7 +1,6 @@
 
 // using the compiler flag -Os
 
-
 #include <Arduino.h>
 #include <Wire.h> // i2c
 
@@ -20,14 +19,8 @@
 // I2C address
 #define LM2759 83
 
-// #define CameraFlash 0
-
-/* OLD HARDWARE
-#define button1 0 // pa6
-#define button2 4 // pa3
-*/
-#define button1 1 // pa7
-#define button2 4 // pa3
+// #define button1 1 // pa7
+// #define button2 4 // pa3
 
 uint8_t torchBrightness = 0; // datasheet max 15, because wee add 0 as an option this var can be 16 as max
 uint8_t FlashBrightness = 4; // datasheet max 15
@@ -44,11 +37,26 @@ volatile uint8_t flags = 0;
 */
 
 // Write i2c data
-void writeRegister(uint8_t device, uint8_t reg, uint8_t value) {
+uint8_t writeRegister(uint8_t device, uint8_t reg, uint8_t value) {
   Wire.beginTransmission(device);
   Wire.write(reg);
   Wire.write(value);
   Wire.endTransmission();
+  
+  // if (Wire.endTransmission() > 0) {
+  //   batteryDead = 1;
+  // } else {
+  //   batteryDead = 1;
+  // }
+}
+
+void writeBrightness() {
+  if (torchBrightness > 0) {
+    writeRegister(LM2759, 0xA0, (torchBrightness - 1));
+    writeRegister(LM2759, 0x10, 0x09); // torch mode
+  } else {
+    writeRegister(LM2759, 0x10, 0x08); // set to shutoff
+  }
 }
 
 /*
@@ -98,8 +106,14 @@ void gpioSetup () {
   PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
   PORTA.PIN7CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
 
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sei();
+  PORTA_DIR = PIN6_bm; // extra pin as out
+
+  PORTA_OUTSET = PIN6_bm;
+  delay(100);
+  PORTA_OUTCLR = PIN6_bm;
+
+  // set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  // sei();
 }
 
 ISR(PORTA_PORT_vect) {
@@ -124,13 +138,19 @@ void i2cSetup () {
 void setup() {
   gpioSetup();
   i2cSetup();
-  disablePeripherals();
+  // disablePeripherals();
+
+  delay(500);
+  writeRegister(LM2759, 0xA0, 1);
+  writeRegister(LM2759, 0x10, 0x09); // torch mode  
 
   // change clock speeds need to test
   // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, 0);   // 20 MHz
   // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, CLKCTRL_PDIV_4X_gc | CLKCTRL_PEN_bm);  // 5 MHz
 
-
+  PORTA_OUTSET = PIN6_bm;
+  delay(100);
+  PORTA_OUTCLR = PIN6_bm;
 }
 
 /*
@@ -156,25 +176,15 @@ void sleepDevice() {
   // sleep_disable();
 }
 
-void writeBrightness() {
-  writeRegister(LM2759, 0xA0, (torchBrightness - 1));
-}
-
 // Increases the torch mode brightness
 void brightnessUp () {
   if (torchBrightness < maxBrightnessLevel) { // brightness below max
     torchBrightness++;
-    if (torchBrightness == 1) {
-      writeRegister(LM2759, 0x10, 0x09); // torch mode
-    }
-    writeBrightness();
 
   } else if (torchBrightness >= maxBrightnessLevel) { // wrap back around from max brightness to off
     torchBrightness = 0;
-    writeRegister(LM2759, 0x10, 0x08); // set to shutoff
-
   }
-
+  writeBrightness();
 
   /* else if ((torchBrightness >= maxBrightnessLevel)) { // flash
     writeRegister(LM2759, 0xB0, FlashBrightness); // set Flash current
@@ -192,16 +202,11 @@ void brightnessUp () {
 void brightnessDown () {
   if (torchBrightness > 0) {
     torchBrightness--;
-    if (torchBrightness <= 0) {
-      writeRegister(LM2759, 0x10, 0x08); // set to shutoff
-    } else {
-      writeBrightness();
-    }
 
   } else if (torchBrightness <= 0) { // torch already at 0, wrap around to max brightness
     torchBrightness = maxBrightnessLevel;
-    writeRegister(LM2759, 0x10, 0x09); // torch mode
   }
+  writeBrightness();
 
 
   while (!digitalRead(button2)) {}
@@ -217,9 +222,10 @@ void loop() {
     flags = 0;
     brightnessDown();
   }
-  
+
   sleepDevice();
-  
+
+  // torchBrightness = 2;
+  // writeBrightness();
+  // delay(10);  
 }
-
-
