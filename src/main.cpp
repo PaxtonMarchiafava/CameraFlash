@@ -11,7 +11,7 @@
 #include <avr/io.h>
 
 // constants
-#define maxBrightnessLevel 12 // max 16
+#define maxBrightnessLevel 14 // max 16
 
 #define brightnessUpFlag 1
 #define brightnessDownFlag 2
@@ -19,8 +19,8 @@
 // I2C address
 #define LM2759 83
 
-// #define button1 1 // pa7
-// #define button2 4 // pa3
+#define button1 1 // pa7
+#define button2 4 // pa3
 
 uint8_t torchBrightness = 0; // datasheet max 15, because wee add 0 as an option this var can be 16 as max
 uint8_t FlashBrightness = 4; // datasheet max 15
@@ -106,8 +106,8 @@ void gpioSetup () {
   PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
   PORTA.PIN7CTRL = PORT_PULLUPEN_bm | PORT_ISC_LEVEL_gc;
 
-  PORTA_DIR = PIN6_bm; // extra pin as out
-
+  // setup extra pin as a test bit
+  PORTA_DIR = PIN6_bm;
   PORTA_OUTSET = PIN6_bm;
   delay(100);
   PORTA_OUTCLR = PIN6_bm;
@@ -148,9 +148,9 @@ void setup() {
   // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, 0);   // 20 MHz
   // _PROTECTED_WRITE(CLKCTRL.MCLKCTRLB, CLKCTRL_PDIV_4X_gc | CLKCTRL_PEN_bm);  // 5 MHz
 
-  PORTA_OUTSET = PIN6_bm;
-  delay(100);
-  PORTA_OUTCLR = PIN6_bm;
+  // PORTA_OUTSET = PIN6_bm;
+  // delay(100);
+  // PORTA_OUTCLR = PIN6_bm;
 }
 
 /*
@@ -225,7 +225,4 @@ void loop() {
 
   sleepDevice();
 
-  // torchBrightness = 2;
-  // writeBrightness();
-  // delay(10);  
 }
