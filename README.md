@@ -1,6 +1,6 @@
 # CameraFlash
 
-![Corner View of the Prototype](MEDIA/PrototypeCorner.jpeg)
+![Corner View of the Prototype](MEDIA/Corner.jpeg)
 
 A compact camera-mounted flashlight/torch built for a Sony a7III, designed to sit on a cold shoe adapter. Brightness is adjustable across 15 levels via two buttons, with deep sleep between presses for extremely low idle current (~15µA).
 
