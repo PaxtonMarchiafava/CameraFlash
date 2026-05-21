@@ -49,6 +49,7 @@ Brightness is written to the LM2759 over I2C. At level 0 the driver is shut down
 | **Total** | **~15 µA** | LED off |
 
 With a 4000 mAh battery, idle battery life is approximately
+
 $$
 \begin{align}
 \frac{Battery Capacity}{Current Consumption} =& Hours \\
